@@ -1,0 +1,83 @@
+name: Deploys to ECS
+on:
+  workflow_call:
+    inputs:
+      AWS_REGION:
+        required: true
+        type: string
+      ECR_REPOSITORY:
+        required: true
+        type: string
+      ECS_SERVICE:
+        required: true
+        type: string
+      ECS_CLUSTER:
+        required: true
+        type: string
+      CONTAINER_NAME:
+        required: true
+        type: string
+      environment:
+        required: true
+        type: string
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+      SECRET_VALUE:
+        required: true
+      ALB_DNS_NAME:
+        required: true
+      
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@13d241b293754004c80624b5567555c4a39ffbe3
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ inputs.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@aaf69d68aa3fb14c1d5a6be9ac61fe15b48453a2
+
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+          ECR_REPOSITORY: ${{ inputs.ECR_REPOSITORY }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+      - name: Update the task definition with new image & new SECRET_VALUE
+        uses: donaldpiret/ecs-deploy@master
+        env:
+          REPLACE_WITH_IMAGE: '${{ inputs.CONTAINER_NAME }} ${{ steps.login-ecr.outputs.registry }}/${{ inputs.ECR_REPOSITORY }}:${{ github.sha }}'
+          secret_value: ${{ inputs.CONTAINER_NAME }} SECRET_VALUE ${{ secrets.SECRET_VALUE }}
+        with:
+          cluster: ${{ inputs.ECS_CLUSTER }}
+          target: ${{ inputs.ECS_SERVICE }}
+          image: ${{ env.REPLACE_WITH_IMAGE }}
+          env_vars: ${{ env.secret_value }}
+          timeout: 1200
+      
+      - name: Sanity Check
+        run: |
+          response_code=$(curl -s -o /dev/null -w "%{http_code}" http://${{ secrets.ALB_DNS_NAME }})  
+          if [ "$response_code" == "200" ]; then
+            echo "Sanity check passed. Application is accessible."
+          else
+            echo "Sanity check failed. Application returned HTTP status code: $response_code"
+            exit 1
+          fi  

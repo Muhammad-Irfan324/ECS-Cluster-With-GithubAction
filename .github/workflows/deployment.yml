@@ -1,0 +1,21 @@
+name: Deploy to Amazon ECS Cluster
+
+on:
+  push:
+    branches:
+      - main       
+jobs:
+  deployOnECS:
+    uses: ./.github/workflows/deploy-to-ecs-caller.yml
+    with:
+      AWS_REGION: us-east-1
+      ECR_REPOSITORY: node-hello-world
+      ECS_SERVICE: hello-world-service
+      ECS_CLUSTER: HelloWorldCluster
+      CONTAINER_NAME: hello-world
+      environment: test-stage
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      SECRET_VALUE: ${{ secrets.SECRET_VALUE }}
+      ALB_DNS_NAME: ${{ secrets.ALB_DNS_NAME }}
