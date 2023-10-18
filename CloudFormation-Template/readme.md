@@ -22,12 +22,12 @@ For instructions on pushing the Docker image to ECR, please refer to the [ECR Im
 **Steps Performed by CloudFormation Template**
 
     - Create VPC
-    - 2 Public Subnet and one Private Subnet
+    - 2 Public Subnet and 2 Private Subnet
     - Internet Gateway Created and Added in Public Route Table 
     - Public Subnet Assoication with Public Route Table 
-    - NatGateway Created in first public subnet with elastic IP
-    - Private Route table created and NAT gateway added in it for internet traffic 
-    - private subnet association with private route table
+    - NatGateway Created in first and second public subnet with elastic IP
+    - Private Route tables created and NAT gateway added in it for internet traffic 
+    - private subnet association with private route tables
     - Role with policy ARN for ECS task execution role and ECR readonly 
     - ECS task definition with container from ECR 
     - ECS and ALB security Group
@@ -50,6 +50,10 @@ For instructions on pushing the Docker image to ECR, please refer to the [ECR Im
 #############################
 
   ![Parameters](https://github.com/Muhammad-Irfan324/ECS-Cluster-With-GithubAction/blob/main/CloudFormation-Template/Selection_999(262).png)
+
+#############################
+
+  ![CloudWatchLogs](https://github.com/Muhammad-Irfan324/ECS-Cluster-With-GithubAction/blob/main/CloudFormation-Template/Selection_999(386).png)
 
 #############################
 
